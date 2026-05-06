@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעקב הנקה</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #120e1e;
+    color: #f0eaf8;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .blob1 {
+    position: fixed; top: -100px; right: -80px;
+    width: 350px; height: 350px; border-radius: 50%;
+    background: radial-gradient(circle, #4a1878 0%, transparent 70%);
+    opacity: 0.5; pointer-events: none; z-index: 0;
+  }
+  .blob2 {
+    position: fixed; bottom: -120px; left: -60px;
+    width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, #1a3a5c 0%, transparent 70%);
+    opacity: 0.5; pointer-events: none; z-index: 0;
+  }
+
+  .page {
+    max-width: 420px; margin: 0 auto;
+    padding: 32px 20px 100px;
+    position: relative; z-index: 1;
+    display: none; flex-direction: column;
+  }
+  .page.active { display: flex; }
+
+  h1 {
+    font-size: 36px; font-weight: 800;
+    background: linear-gradient(135deg, #e8d5ff, #b39ddb);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+  h2 {
+    font-size: 26px; font-weight: 800;
+    background: linear-gradient(135deg, #e8d5ff, #b39ddb);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+  }
+
+  .subtitle { color: #9e8fc0; font-size: 15px; margin-bottom: 28px; }
+
+  .stats-row { display: flex; gap: 10px; margin-bottom: 28px; }
+  .stat-card {
+    flex: 1; background: rgba(255,255,255,0.05);
+    border-radius: 16px; padding: 14px 8px; text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .stat-num { display: block; font-size: 26px; font-weight: 700; color: #d4b8ff; }
+  .stat-label { display: block; font-size: 11px; color: #7a6c99; }
+
+  .big-btn {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 8px; padding: 32px 0;
+    background: linear-gradient(135deg, #6b21a8, #4c1d95);
+    border: none; border-radius: 24px; color: #fff;
+    cursor: pointer; margin-bottom: 24px; width: 100%;
+    box-shadow: 0 8px 32px rgba(107,33,168,0.4);
+  }
+  .big-btn:active { transform: scale(0.97); }
+  .big-btn .icon { font-size: 40px; }
+  .big-btn .label { font-size: 22px; font-weight: 700; }
+
+  .reminder-box {
+    background: rgba(255,255,255,0.04); border-radius: 16px;
+    padding: 16px 20px; margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .reminder-title { font-size: 14px; color: #b09dcc; margin-bottom: 10px; }
+  .reminder-row { display: flex; align-items: center; gap: 10px; }
+  .reminder-input {
+    width: 56px; padding: 6px 10px; border-radius: 10px;
+    background: #1e1730; border: 1px solid #3d2f6b;
+    color: #f0eaf8; font-size: 16px; text-align: center;
+  }
+  .reminder-unit { color: #8b7fa8; font-size: 14px; }
+  .reminder-btn {
+    padding: 7px 16px; border-radius: 10px; cursor: pointer; font-size: 13px;
+    border: 1px solid #4a3a72; background: transparent; color: #9e8fc0;
+  }
+  .reminder-btn.on { border: none; background: #6b21a8; color: #fff; }
+
+  .bottom-nav { display: flex; gap: 12px; }
+  .nav-btn {
+    flex: 1; padding: 14px; border-radius: 16px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    color: #c4b0e8; cursor: pointer; font-size: 15px;
+  }
+
+  .timer-display {
+    font-size: 72px; font-weight: 900; letter-spacing: -2px;
+    background: linear-gradient(135deg, #e8d5ff, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center; margin: 8px 0;
+  }
+  .timer-sub { color: #b09dcc; font-size: 14px; margin-bottom: 24px; text-align: center; }
+
+  .field-label { font-size: 13px; color: #9e8fc0; margin-bottom: 8px; margin-top: 16px; display: block; }
+
+  .pill-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pill {
+    padding: 10px 18px; border-radius: 12px; cursor: pointer;
+    font-size: 14px; border: 1px solid #3d2f6b;
+    background: transparent; color: #9e8fc0;
+  }
+  .pill.on { background: #6b21a8; color: #fff; border-color: #6b21a8; font-weight: 600; }
+
+  textarea, input[type=number], input[type=date], input[type=time] {
+    width: 100%; padding: 11px 14px; border-radius: 14px;
+    background: #1e1730; border: 1px solid #3d2f6b;
+    color: #f0eaf8; font-size: 15px; margin-top: 4px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .finish-btn {
+    margin-top: 28px; padding: 16px; width: 100%; border-radius: 16px; border: none;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff; font-size: 18px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 6px 24px rgba(22,163,74,0.35);
+  }
+  .cancel-btn {
+    margin-top: 10px; padding: 12px; width: 100%; border-radius: 16px;
+    border: 1px solid #3d2f6b; background: transparent;
+    color: #7a6c99; font-size: 15px; cursor: pointer;
+  }
+  .back-btn {
+    background: transparent; border: none; color: #9e8fc0;
+    font-size: 16px; cursor: pointer; padding: 0; margin-left: 12px;
+  }
+
+  .history-header { display: flex; align-items: center; margin-bottom: 20px; }
+  .day-header { font-size: 13px; color: #7a6c99; margin-bottom: 10px; padding-right: 4px; }
+  .session-card {
+    background: rgba(255,255,255,0.04); border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .session-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .session-time { font-size: 18px; font-weight: 700; color: #d4b8ff; min-width: 50px; }
+  .badge { padding: 4px 10px; border-radius: 8px; background: #2a1f45; color: #c4b0e8; font-size: 13px; }
+  .badge.manual { background: #1e2a1e; color: #6bab6b; }
+  .badge.dur { background: #2d2440; }
+  .delete-btn {
+    margin-right: auto; background: transparent; border: none;
+    color: #4a3a72; cursor: pointer; font-size: 16px; padding: 2px 6px;
+  }
+  .session-notes { font-size: 13px; color: #7a6c99; margin-top: 8px; }
+
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: #1e3a2a; color: #6bab6b; padding: 12px 24px;
+    border-radius: 14px; z-index: 100; font-size: 15px; font-weight: 600;
+    border: 1px solid #2d5c3d; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .empty-msg { color: #8b7fa8; text-align: center; margin-top: 60px; }
+</style>
+</head>
+<body>
+
+<div class="blob1"></div>
+<div class="blob2"></div>
+<div class="toast" id="toast"></div>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <h1>הנקה 🤱</h1>
+  <p class="subtitle" id="last-session-text">אין הנקות עדיין</p>
+  <div class="stats-row">
+    <div class="stat-card">
+      <span class="stat-num" id="stat-count">0</span>
+      <span class="stat-label">הנקות היום</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="stat-minutes">0</span>
+      <span class="stat-label">דקות היום</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="stat-next">—</span>
+      <span class="stat-label">צד הבא</span>
+    </div>
+  </div>
+  <button class="big-btn" id="start-btn">
+    <span class="icon">▶</span>
+    <span class="label">התחלי הנקה</span>
+  </button>
+  <div class="reminder-box">
+    <div class="reminder-title">🔔 תזכורת</div>
+    <div class="reminder-row">
+      <input class="reminder-input" type="number" id="reminder-hours" min="1" max="12" value="3">
+      <span class="reminder-unit">שעות</span>
+      <button class="reminder-btn" id="reminder-btn">הפעלי</button>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" id="btn-manual">+ הוספה ידנית</button>
+    <button class="nav-btn" id="btn-history">היסטוריה</button>
+  </div>
+</div>
+
+<!-- ACTIVE SESSION -->
+<div class="page" id="page-active">
+  <h2>הנקה פעילה</h2>
+  <div class="timer-display" id="timer-display">0:00</div>
+  <p class="timer-sub" id="timer-start-text"></p>
+  <label class="field-label">צד</label>
+  <div class="pill-row" id="active-side-pills"></div>
+  <label class="field-label">מלא / חלקי</label>
+  <div class="pill-row" id="active-fill-pills"></div>
+  <label class="field-label">הערות</label>
+  <textarea id="active-notes" placeholder="ינקה טוב, כאב לי..."></textarea>
+  <button class="finish-btn" id="finish-btn">סיימי הנקה ✓</button>
+  <button class="cancel-btn" id="cancel-btn">ביטול</button>
+</div>
+
+<!-- MANUAL ADD -->
+<div class="page" id="page-add">
+  <h2>הוספה ידנית</h2>
+  <label class="field-label">תאריך</label>
+  <input type="date" id="add-date">
+  <label class="field-label">שעה</label>
+  <input type="time" id="add-time">
+  <label class="field-label">משך (דקות, אופציונלי)</label>
+  <input type="number" id="add-duration" placeholder="15">
+  <label class="field-label">צד</label>
+  <div class="pill-row" id="add-side-pills"></div>
+  <label class="field-label">מלא / חלקי</label>
+  <div class="pill-row" id="add-fill-pills"></div>
+  <label class="field-label">הערות</label>
+  <textarea id="add-notes" placeholder="הערות..."></textarea>
+  <button class="finish-btn" id="submit-manual-btn">שמרי ✓</button>
+  <button class="cancel-btn" id="cancel-add-btn">ביטול</button>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <div class="history-header">
+    <button class="back-btn" id="history-back-btn">← חזרה</button>
+    <h2 style="margin:0; font-size:24px;">היסטוריה</h2>
+  </div>
+  <div id="history-list"></div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+
+  var SIDES = [
+    { id: 'right', label: 'ימין', icon: '◑' },
+    { id: 'left',  label: 'שמאל', icon: '◐' },
+    { id: 'both',  label: 'שניהם', icon: '●' },
+  ];
+  var FILL = [
+    { id: 'full',    label: 'מלא' },
+    { id: 'partial', label: 'חלקי' },
+  ];
+
+  var sessions = [];
+  var activeSession = null;
+  var timerInterval = null;
+  var reminderInterval = null;
+  var reminderActive = false;
+  var pillState = {};
+  var toastTimeout = null;
+
+  // ---- Storage ----
+  function loadSessions() {
+    try {
+      var raw = localStorage.getItem('bf-sessions');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveSessions() {
+    try { localStorage.setItem('bf-sessions', JSON.stringify(sessions)); } catch (e) {}
+  }
+
+  // ---- Toast ----
+  function showToast(msg, duration) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(function () { el.classList.remove('show'); }, duration || 3000);
+  }
+
+  // ---- Pages ----
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ---- Pills ----
+  function initPills(containerId, options, stateKey, defaultVal) {
+    pillState[stateKey] = defaultVal;
+    var container = document.getElementById(containerId);
+    container.innerHTML = '';
+    options.forEach(function (opt) {
+      var btn = document.createElement('button');
+      btn.className = 'pill' + (opt.id === defaultVal ? ' on' : '');
+      btn.textContent = (opt.icon ? opt.icon + ' ' : '') + opt.label;
+      btn.onclick = function () {
+        pillState[stateKey] = opt.id;
+        container.querySelectorAll('.pill').forEach(function (b) { b.classList.remove('on'); });
+        btn.classList.add('on');
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  // ---- Helpers ----
+  function formatDuration(seconds) {
+    var m = Math.floor(seconds / 60);
+    var s = seconds % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function formatTime(iso) {
+    return new Date(iso).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  }
+  function timeSince(iso) {
+    var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return 'לפני ' + diff + ' שניות';
+    if (diff < 3600) return 'לפני ' + Math.floor(diff / 60) + ' דקות';
+    var h = Math.floor(diff / 3600);
+    var m = Math.floor((diff % 3600) / 60);
+    return 'לפני ' + h + ' שעות' + (m > 0 ? ' ו-' + m + ' דקות' : '');
+  }
+
+  // ---- Home ----
+  function updateHome() {
+    var last = sessions[0];
+    document.getElementById('last-session-text').textContent =
+      last ? 'הנקה אחרונה: ' + timeSince(last.startTime) : 'אין הנקות עדיין';
+    var today = sessions.filter(function (s) {
+      return new Date(s.startTime).toDateString() === new Date().toDateString();
+    });
+    document.getElementById('stat-count').textContent = today.length;
+    var totalMin = Math.round(today.reduce(function (a, s) { return a + (s.duration || 0); }, 0) / 60);
+    document.getElementById('stat-minutes').textContent = totalMin;
+    var lastSide = last && last.side;
+    var nextSide = lastSide === 'right' ? 'שמאל' : lastSide === 'left' ? 'ימין' : '—';
+    document.getElementById('stat-next').textContent = nextSide;
+  }
+
+  // ---- Active Session ----
+  function startSession() {
+    activeSession = { startTime: new Date().toISOString() };
+    initPills('active-side-pills', SIDES, 'activeSide', 'right');
+    initPills('active-fill-pills', FILL, 'activeFill', 'full');
+    document.getElementById('active-notes').value = '';
+    document.getElementById('timer-start-text').textContent = 'התחלה: ' + formatTime(activeSession.startTime);
+    showPage('page-active');
+    clearInterval(timerInterval);
+    timerInterval = setInterval(function () {
+      var elapsed = Math.floor((Date.now() - new Date(activeSession.startTime).getTime()) / 1000);
+      document.getElementById('timer-display').textContent = formatDuration(elapsed);
+    }, 1000);
+  }
+
+  function finishSession() {
+    if (!activeSession) return;
+    clearInterval(timerInterval);
+    var duration = Math.floor((Date.now() - new Date(activeSession.startTime).getTime()) / 1000);
+    var session = {
+      id: Date.now(),
+      startTime: activeSession.startTime,
+      side: pillState.activeSide,
+      fill: pillState.activeFill,
+      notes: document.getElementById('active-notes').value,
+      duration: duration,
+    };
+    sessions.unshift(session);
+    saveSessions();
+    activeSession = null;
+    updateHome();
+    showPage('page-home');
+    showToast('✓ הנקה נשמרה בהצלחה');
+  }
+
+  function cancelSession() {
+    clearInterval(timerInterval);
+    activeSession = null;
+    showPage('page-home');
+  }
+
+  // ---- Manual Add ----
+  function openManual() {
+    var now = new Date();
+    document.getElementById('add-date').value = now.toISOString().slice(0, 10);
+    document.getElementById('add-time').value = now.toTimeString().slice(0, 5);
+    document.getElementById('add-duration').value = '';
+    document.getElementById('add-notes').value = '';
+    initPills('add-side-pills', SIDES, 'addSide', 'right');
+    initPills('add-fill-pills', FILL, 'addFill', 'full');
+    showPage('page-add');
+  }
+
+  function submitManual() {
+    var dateVal = document.getElementById('add-date').value;
+    var timeVal = document.getElementById('add-time').value;
+    var durVal  = document.getElementById('add-duration').value;
+    var notes   = document.getElementById('add-notes').value;
+    if (!dateVal || !timeVal) { alert('נא למלא תאריך ושעה'); return; }
+    var parts = timeVal.split(':');
+    var dt = new Date(dateVal);
+    dt.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+    var session = {
+      id: Date.now(),
+      startTime: dt.toISOString(),
+      side: pillState.addSide,
+      fill: pillState.addFill,
+      notes: notes,
+      duration: durVal ? parseInt(durVal) * 60 : null,
+      manual: true,
+    };
+    sessions.push(session);
+    sessions.sort(function (a, b) { return new Date(b.startTime) - new Date(a.startTime); });
+    saveSessions();
+    updateHome();
+    showPage('page-home');
+    showToast('✓ הנקה נוספה');
+  }
+
+  // ---- History ----
+  function showHistory() {
+    renderHistory();
+    showPage('page-history');
+  }
+
+  function renderHistory() {
+    var list = document.getElementById('history-list');
+    if (sessions.length === 0) {
+      list.innerHTML = '<p class="empty-msg">אין הנקות עדיין</p>';
+      return;
+    }
+    var groups = {};
+    sessions.forEach(function (s) {
+      var key = new Date(s.startTime).toLocaleDateString('he-IL');
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    var html = '';
+    Object.keys(groups).forEach(function (day) {
+      var daySessions = groups[day];
+      html += '<div class="day-header">' + day + ' · ' + daySessions.length + ' הנקות</div>';
+      daySessions.forEach(function (s) {
+        var sideObj = SIDES.find(function (x) { return x.id === s.side; });
+        var sideLabel = sideObj ? sideObj.icon + ' ' + sideObj.label : s.side;
+        var fillLabel = s.fill === 'full' ? 'מלא' : 'חלקי';
+        var durBadge = s.duration ? '<span class="badge dur">' + Math.round(s.duration / 60) + ' דק׳</span>' : '';
+        var manualBadge = s.manual ? '<span class="badge manual">ידני</span>' : '';
+        var notes = s.notes ? '<p class="session-notes">' + s.notes + '</p>' : '';
+        html += '<div class="session-card">' +
+          '<div class="session-row">' +
+          '<span class="session-time">' + formatTime(s.startTime) + '</span>' +
+          '<span class="badge">' + sideLabel + '</span>' +
+          '<span class="badge">' + fillLabel + '</span>' +
+          durBadge + manualBadge +
+          '<button class="delete-btn" data-id="' + s.id + '">✕</button>' +
+          '</div>' + notes + '</div>';
+      });
+    });
+    list.innerHTML = html;
+
+    list.querySelectorAll('.delete-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = parseInt(btn.getAttribute('data-id'));
+        if (!confirm('למחוק הנקה זו?')) return;
+        sessions = sessions.filter(function (s) { return s.id !== id; });
+        saveSessions();
+        updateHome();
+        renderHistory();
+      });
+    });
+  }
+
+  // ---- Reminder ----
+  function toggleReminder() {
+    reminderActive = !reminderActive;
+    var btn = document.getElementById('reminder-btn');
+    var hours = parseInt(document.getElementById('reminder-hours').value) || 3;
+    if (reminderActive) {
+      btn.textContent = 'פעיל ✓';
+      btn.classList.add('on');
+      clearInterval(reminderInterval);
+      reminderInterval = setInterval(function () {
+        if (sessions.length === 0) return;
+        var diff = (Date.now() - new Date(sessions[0].startTime).getTime()) / 3600000;
+        if (diff >= hours) {
+          showToast('⏰ עברו ' + hours + ' שעות מההנקה האחרונה', 8000);
+          clearInterval(reminderInterval);
+          reminderActive = false;
+          btn.textContent = 'הפעלי';
+          btn.classList.remove('on');
+        }
+      }, 30000);
+    } else {
+      btn.textContent = 'הפעלי';
+      btn.classList.remove('on');
+      clearInterval(reminderInterval);
+    }
+  }
+
+  // ---- Wire up buttons ----
+  document.getElementById('start-btn').addEventListener('click', startSession);
+  document.getElementById('finish-btn').addEventListener('click', finishSession);
+  document.getElementById('cancel-btn').addEventListener('click', cancelSession);
+  document.getElementById('btn-manual').addEventListener('click', openManual);
+  document.getElementById('btn-history').addEventListener('click', showHistory);
+  document.getElementById('submit-manual-btn').addEventListener('click', submitManual);
+  document.getElementById('cancel-add-btn').addEventListener('click', function () { showPage('page-home'); });
+  document.getElementById('history-back-btn').addEventListener('click', function () { showPage('page-home'); });
+  document.getElementById('reminder-btn').addEventListener('click', toggleReminder);
+
+  // ---- Init ----
+  sessions = loadSessions();
+  updateHome();
+
+});
+</script>
+</body>
+</html>
